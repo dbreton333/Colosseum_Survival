@@ -1,0 +1,23 @@
+{
+    "version": "0.2",
+    "configurations": [
+
+      {
+        "name": "Debug simulator.py",
+        "type": "python",
+        "request": "launch",
+        "program": "${workspaceFolder}/simulator.py",
+        "args": [
+          "--player_1",
+          "alpha_beta_agent",
+          "--player_2",
+          "alpha_beta_agent",
+          "--display",
+          "--board_size",
+          "4"
+        ],
+        "console": "integratedTerminal",
+        "python": "/home/dbreton/miniconda3/envs/ECSE424/bin/python" 
+      }
+    ]
+  }
