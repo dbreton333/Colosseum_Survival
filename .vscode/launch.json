@@ -9,12 +9,12 @@
         "program": "${workspaceFolder}/simulator.py",
         "args": [
           "--player_1",
-          "alpha_beta_agent",
+          "heuristic_agent_brute",
           "--player_2",
-          "alpha_beta_agent",
+          "emile_agent",
           "--display",
           "--board_size",
-          "4"
+          "6"
         ],
         "console": "integratedTerminal",
         "python": "/home/dbreton/miniconda3/envs/ECSE424/bin/python" 

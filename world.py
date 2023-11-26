@@ -14,7 +14,6 @@ logging.basicConfig(format="%(levelname)s:%(message)s", level=logging.INFO)
 
 logger = logging.getLogger(__name__)
 
-
 class World:
     def __init__(
         self,
