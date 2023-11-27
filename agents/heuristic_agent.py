@@ -30,7 +30,11 @@ class HeuristicAgent(Agent):
         self.chess_board = None
         self.end_game = False
         self.num_of_walls = None
-             # Opposite Directions
+        self.my_move_count = None
+        self.max_time = 1.95
+        self.start_time = None
+        self.max_depth = 2
+        # Opposite Directions
         self.opposites = {0: 2, 1: 3, 2: 0, 3: 1}
 
     def step(self, chess_board, my_pos, adv_pos, max_step):
@@ -44,14 +48,7 @@ class HeuristicAgent(Agent):
         You should return a tuple of ((x, y), dir),
         """
 
-        # Some simple code to help you with timing. Consider checking 
-        # time_taken during your search and breaking with the best answer
-        # so far when it nears 2 seconds.
-
         self.chess_board = chess_board
-
-        if self.num_of_walls is None:
-            self.num_of_walls = self.count_game_walls()
 
         if self.board_size is None:
             self.board_size = chess_board.shape[0]
@@ -59,31 +56,23 @@ class HeuristicAgent(Agent):
         if self.max_step is None:
             self.max_step = max_step
 
-        start_time = time.time()
+        if self.board_size > 7:
+            self.max_depth = 2
 
-        best_move = self.alpha_beta(my_pos, adv_pos, 2)
+        self.start_time = time.time()
 
-        if not self.end_game and self.num_of_walls > self.board_size ** 2 * 2:
-            self.end_game = True
-
-        self.num_of_walls += 2
+        best_move = self.alpha_beta(my_pos, adv_pos, self.max_depth)
 
         new_pos, new_dir = best_move
 
-        time_taken = time.time() - start_time
-        print("My AI's turn took ", time_taken, "seconds.")
+        time_taken = time.time() - self.start_time
 
+        if(time_taken > self.max_time):
+            print("My AI's turn took ", time_taken, "seconds")
+ 
         # dummy return
         return new_pos, new_dir
-    
-    def count_game_walls(self):
-        walls = 0
-        for row in self.chess_board:
-            for cell in row:
-                for wall in cell:
-                    if wall:
-                        walls += 1
-        return walls
+
     
     
     def check_endgame(self,my_pos, adv_pos):
@@ -132,82 +121,41 @@ class HeuristicAgent(Agent):
             if my_score == adv_score:
                 return 0
             if my_score > adv_score:
-                return 100
+                return sys.maxsize
             elif my_score < adv_score:
-                return -100
+                return -sys.maxsize
         
         return None
 
-
-    def generate_all_moves_bfs(self,my_pos, adv_pos, max_step, all_moves):
-
-        queue = deque([(my_pos, max_step)])  # Queue to store positions with remaining steps
+    def generate_all_moves_bfs(self,my_pos, adv_pos):
+        moves = []
+        queue = deque([(my_pos, self.max_step)])  # Queue to store positions with remaining steps
         visited_positions = np.zeros((self.board_size, self.board_size), dtype=bool)
-        visited_positions[my_pos] = True
+        visited_positions[my_pos[0]][my_pos[1]] = True
 
         while queue:
             current_pos, steps_remaining = queue.popleft()
-
             r, c = current_pos
 
             allowed_barriers = [i for i in range(0, 4) if not self.chess_board[r, c, i]]
 
-
             for barrier_dir in allowed_barriers:
                     potential_move = (current_pos, barrier_dir)
-                    all_moves.append(potential_move)
+                    moves.append(potential_move)
    
             if steps_remaining <= 0:
                 continue
 
-            allowed_dirs = [
-                d
-                for d in range(0, 4)
-                if not self.chess_board[r, c, d] and 
-                not adv_pos == (r + self.moves[d][0], c + self.moves[d][1])
-                and not visited_positions[r + self.moves[d][0]][ c + self.moves[d][1]]
-            ]
+            for dir, move in enumerate(self.moves):
+                if(self.chess_board[r, c, dir]): continue
+                if adv_pos == (r + move[0], c + move[1]): continue
+                if visited_positions[r + move[0]][ c + move[1]]: continue
 
-            for allowed in allowed_dirs:
-                m_r, m_c = self.moves[allowed]
-                my_new_pos = (r + m_r, c + m_c)
-                visited_positions[my_new_pos] = True
+                my_new_pos = (r + move[0], c + move[1])
+                visited_positions[r + move[0]][ c + move[1]] = True
                 queue.append((my_new_pos, steps_remaining - 1))
 
-    def generate_all_max_moves_bfs(self,my_pos, adv_pos, max_step, all_moves):
-
-        queue = deque([(my_pos, max_step)])  # Queue to store positions with remaining steps
-        visited_positions = np.zeros((self.board_size, self.board_size), dtype=bool)
-        visited_positions[my_pos] = True
-
-        while queue:
-            current_pos, steps_remaining = queue.popleft()
-
-            r, c = current_pos
-
-            allowed_barriers = [i for i in range(0, 4) if not self.chess_board[r, c, i]]
-
-
-            allowed_dirs = [
-                d
-                for d in range(0, 4)
-                if not self.chess_board[r, c, d] and 
-                not adv_pos == (r + self.moves[d][0], c + self.moves[d][1])
-                and not visited_positions[r + self.moves[d][0]][ c + self.moves[d][1]]
-            ]
-   
-            if steps_remaining == 0 or len(allowed_dirs) == 0:
-                for barrier_dir in allowed_barriers:
-                    potential_move = (current_pos, barrier_dir)
-                    all_moves.append(potential_move)
-                continue
-
-
-            for allowed in allowed_dirs:
-                m_r, m_c = self.moves[allowed]
-                my_new_pos = (r + m_r, c + m_c)
-                visited_positions[my_new_pos] = True
-                queue.append((my_new_pos, steps_remaining - 1))
+        return moves
     
 
     def add_Wall(self, my_pos, dir):
@@ -224,16 +172,13 @@ class HeuristicAgent(Agent):
         self.chess_board[adj_x, adj_y, self.opposites[dir]] = False
         return my_pos, dir
     
-    def get_current_moves(self,my_pos, adv_pos, moves):
-        self.generate_all_moves_bfs(my_pos, adv_pos, self.max_step, moves)
-    
     def alpha_beta(self,my_pos, adv_pos, depth):  
         
-        moves_max = []
         best_move = None
-        best_score = -sys.maxsize
+        alpha = -sys.maxsize
+        beta = sys.maxsize
 
-        self.get_current_moves(my_pos, adv_pos, moves_max)
+        moves_max = self.generate_all_moves_bfs(my_pos, adv_pos)
 
         for move in moves_max:
             new_my_pos, new_dir = move
@@ -241,16 +186,15 @@ class HeuristicAgent(Agent):
             self.add_Wall(new_my_pos, new_dir)
             eval_winner = self.evaluate_winner(new_my_pos, adv_pos)
             if eval_winner is None:
-                score = self.minValue(new_my_pos, adv_pos, depth - 1, -sys.maxsize, sys.maxsize)
+                score = self.minValue(new_my_pos, adv_pos, depth - 1, alpha, beta)
             else:
                 score = eval_winner
             self.remove_Wall(new_my_pos, new_dir)
 
-            if score > best_score:
+            if score > alpha:
                 best_move = move
-                best_score = score
-            
-    
+                alpha = score
+        
         if best_move is None:
             return moves_max[-1]
         
@@ -262,16 +206,14 @@ class HeuristicAgent(Agent):
         if depth == 0:
             return self.evaluate_position(my_pos, adv_pos)
         
-        moves_max = []
-
         # Generate all possible moves for the player
-        self.get_current_moves(my_pos, adv_pos, moves_max)
+        moves_max = self.generate_all_moves_bfs(my_pos, adv_pos)
 
         if len(moves_max) == 0:
             return self.evaluate_position(my_pos, adv_pos)
 
-        for move in moves_max:
-            new_my_pos, new_dir = move
+        for max_move in moves_max:
+            new_my_pos, new_dir = max_move
 
             self.add_Wall(new_my_pos, new_dir)
             eval_winner = self.evaluate_winner(new_my_pos, adv_pos)
@@ -279,10 +221,14 @@ class HeuristicAgent(Agent):
                 alpha = max(alpha,self.minValue(new_my_pos, adv_pos, depth - 1, alpha, beta))
             else:
                 alpha = max(alpha,eval_winner)
+                
             self.remove_Wall(new_my_pos, new_dir)
 
             if alpha >= beta:
                 return beta
+            
+            if(time.time() - self.start_time > self.max_time):
+                return alpha
 
         return alpha
 
@@ -290,17 +236,15 @@ class HeuristicAgent(Agent):
 
         if depth == 0:
             return self.evaluate_position(my_pos, adv_pos)
-        
-        moves_min = []
 
         #Generate all possible moves for the adversary
-        self.get_current_moves(my_pos, adv_pos, moves_min)
+        moves_min = self.generate_all_moves_bfs(adv_pos, my_pos)
 
         if len(moves_min) == 0:
             return self.evaluate_position(my_pos, adv_pos)
 
-        for move in moves_min:
-            new_adv_pos, new_dir = move
+        for min_move in moves_min:
+            new_adv_pos, new_dir = min_move
 
             self.add_Wall(new_adv_pos, new_dir)
             eval_winner = self.evaluate_winner(my_pos, new_adv_pos)
@@ -308,47 +252,51 @@ class HeuristicAgent(Agent):
                 beta = min(beta,self.maxValue(my_pos, new_adv_pos, depth - 1, alpha, beta))
             else:
                 beta = min(beta,eval_winner)
+
             self.remove_Wall(new_adv_pos, new_dir)
 
-            if beta <= alpha:
+            if alpha >= beta:
                 return alpha
+            
+            if(time.time() - self.start_time > self.max_time):
+                return beta
             
         return beta
 
+    def count_all_moves(self, my_pos, adv_pos):
+        move_count = 0
+        queue = deque([(my_pos, self.max_step)])  # Queue to store positions with remaining steps
+        visited_positions = np.zeros((self.board_size, self.board_size), dtype=bool)
+        visited_positions[my_pos[0]][my_pos[1]] = True
+
+        while queue:
+            current_pos, steps_remaining = queue.popleft()
+            r, c = current_pos
+
+            allowed_barriers = [i for i in range(0, 4) if not self.chess_board[r, c, i]]
+
+            for _ in allowed_barriers:
+                    move_count+= 1
+   
+            if steps_remaining <= 0:
+                continue
+
+            for dir, move in enumerate(self.moves):
+                if(self.chess_board[r, c, dir]): continue
+                if adv_pos == (r + move[0], c + move[1]): continue
+                if visited_positions[r + move[0]][ c + move[1]]: continue
+
+                my_new_pos = (r + move[0], c + move[1])
+                visited_positions[r + move[0]][ c + move[1]] = True
+                queue.append((my_new_pos, steps_remaining - 1))
+
+        return move_count
+
     def evaluate_position(self,my_pos, adv_pos):
-        my_x, my_y = my_pos
 
-        moves = []
-
-        my_x, my_y = my_pos
-        adv_x, adv_y = adv_pos
-
-        #Generate all possible moves for the adversary
-        self.get_current_moves(my_pos, adv_pos, moves)
-        move_count = len(moves)
-
-        count_adv_walls = 0
-        for wall in self.chess_board[adv_pos]:
-            if wall:
-                count_adv_walls += 1
-        
-        count_walls = 0
-        for wall in self.chess_board[my_x, my_y]:
-            if wall:
-                count_walls += 1
-        
-        point_modifier = 0
-        if count_walls == 3:
-            point_modifier = -10
-
-        adv_point_modifier = 0
-        if count_adv_walls == 3:
-            adv_point_modifier = 10
-
-        distance = ((my_x-adv_x)**2 + (my_y-adv_y)**2)**(1/2)
-
- 
-
+        #Counts all max step moves
+        move_count =self.count_all_moves(my_pos, adv_pos)
+        adv_move_count = self.count_all_moves(adv_pos, my_pos)
           
-        return move_count + point_modifier + adv_point_modifier + int(distance/2)
+        return move_count - adv_move_count
     
