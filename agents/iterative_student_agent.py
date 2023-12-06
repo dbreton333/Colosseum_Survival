@@ -8,16 +8,17 @@ import time
 from collections import deque
 
 
-@register_agent("heuristic_agent")
-class HeuristicAgent(Agent):
+
+@register_agent("iterative_student_agent")
+class IterativeStudentAgent(Agent):
     """
     A dummy class for your implementation. Feel free to use this class to
     add any helper functionalities needed for your agent.
     """
 
     def __init__(self):
-        super(HeuristicAgent, self).__init__()
-        self.name = "heuristic_agent"
+        super(IterativeStudentAgent, self).__init__()
+        self.name = "iterative_student_agent"
         self.dir_map = {
             "u": 0,
             "r": 1,
@@ -31,9 +32,10 @@ class HeuristicAgent(Agent):
         self.end_game = False
         self.num_of_walls = None
         self.my_move_count = None
+        self.time_set = False
         self.max_time = 1.95
         self.start_time = None
-        self.max_depth = 2
+        self.max_depth = 3
         # Opposite Directions
         self.opposites = {0: 2, 1: 3, 2: 0, 3: 1}
 
@@ -58,19 +60,29 @@ class HeuristicAgent(Agent):
 
         if self.board_size > 7:
             self.max_depth = 2
-
+        
+        # 1.95 occassional exceeded time limit for larger board, reduce to 1.925
+        if not self.time_set and self.board_size > 11:
+            self.max_time = 1.925
+        
+        self.time_set = True
         self.start_time = time.time()
+        best_move, alpha = self.alpha_beta(my_pos, adv_pos, self.max_depth)
+        end_time = time.time()
+        time_taken = end_time - self.start_time
+        time_left = 2 - time_taken
+ 
+        if(time_left > time_taken*20 and alpha  < 900):
+            new_best_move, new_alpha = self.alpha_beta(my_pos, adv_pos, self.max_depth+1)
+            if(new_alpha > alpha):
+                best_move = new_best_move
 
-        best_move = self.alpha_beta(my_pos, adv_pos, self.max_depth)
+
+        if(time_taken > 2):
+            print("Iterative Student Turn took " + str(time_taken) + " seconds")
 
         new_pos, new_dir = best_move
-
-        time_taken = time.time() - self.start_time
-
-        if(time_taken > self.max_time):
-            print("My AI's turn took ", time_taken, "seconds")
  
-        # dummy return
         return new_pos, new_dir
 
     
@@ -115,6 +127,7 @@ class HeuristicAgent(Agent):
             return True, my_score, adv_score
         
     def evaluate_winner(self,my_pos, adv_pos, depth):
+
         endgame, my_score, adv_score = self.check_endgame(my_pos, adv_pos)
         
         if endgame:
@@ -123,7 +136,8 @@ class HeuristicAgent(Agent):
             if my_score > adv_score:
                 return 1000 - (self.max_depth-depth)
             elif my_score < adv_score:
-                return -1000 + (self.max_depth-depth)
+                return -1000 + (self.max_depth-depth)    
+  
         
         return None
 
@@ -173,6 +187,7 @@ class HeuristicAgent(Agent):
         return my_pos, dir
     
     def alpha_beta(self,my_pos, adv_pos, depth):  
+
         
         best_move = None
         alpha = -sys.maxsize
@@ -198,7 +213,7 @@ class HeuristicAgent(Agent):
         if best_move is None:
             return moves_max[-1]
         
-        return best_move
+        return best_move, alpha
     
     
     def maxValue(self,my_pos, adv_pos, depth, alpha, beta):
