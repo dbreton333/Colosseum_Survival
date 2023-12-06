@@ -29,9 +29,6 @@ class StudentAgent(Agent):
         self.max_step = None
         self.board_size = None
         self.chess_board = None
-        self.end_game = False
-        self.num_of_walls = None
-        self.my_move_count = None
         self.time_set = False
         self.max_time = 1.95
         self.start_time = None
@@ -64,8 +61,9 @@ class StudentAgent(Agent):
         # 1.95 occassional exceeded time limit for larger board, reduce to 1.925
         if not self.time_set and self.board_size > 11:
             self.max_time = 1.925
+            self.time_set = True
         
-        self.time_set = True
+        
         self.start_time = time.time()
         best_move = self.alpha_beta(my_pos, adv_pos, self.max_depth)
         new_pos, new_dir = best_move
