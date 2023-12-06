@@ -114,16 +114,16 @@ class HeuristicAgent(Agent):
         else:
             return True, my_score, adv_score
         
-    def evaluate_winner(self,my_pos, adv_pos):
+    def evaluate_winner(self,my_pos, adv_pos, depth):
         endgame, my_score, adv_score = self.check_endgame(my_pos, adv_pos)
         
         if endgame:
             if my_score == adv_score:
                 return 0
             if my_score > adv_score:
-                return sys.maxsize
+                return 1000 - (self.max_depth-depth)
             elif my_score < adv_score:
-                return -sys.maxsize
+                return -1000 + (self.max_depth-depth)
         
         return None
 
@@ -184,7 +184,7 @@ class HeuristicAgent(Agent):
             new_my_pos, new_dir = move
             
             self.add_Wall(new_my_pos, new_dir)
-            eval_winner = self.evaluate_winner(new_my_pos, adv_pos)
+            eval_winner = self.evaluate_winner(new_my_pos, adv_pos, depth)
             if eval_winner is None:
                 score = self.minValue(new_my_pos, adv_pos, depth - 1, alpha, beta)
             else:
@@ -216,7 +216,7 @@ class HeuristicAgent(Agent):
             new_my_pos, new_dir = max_move
 
             self.add_Wall(new_my_pos, new_dir)
-            eval_winner = self.evaluate_winner(new_my_pos, adv_pos)
+            eval_winner = self.evaluate_winner(new_my_pos, adv_pos, depth)
             if eval_winner is None:
                 alpha = max(alpha,self.minValue(new_my_pos, adv_pos, depth - 1, alpha, beta))
             else:
@@ -247,7 +247,7 @@ class HeuristicAgent(Agent):
             new_adv_pos, new_dir = min_move
 
             self.add_Wall(new_adv_pos, new_dir)
-            eval_winner = self.evaluate_winner(my_pos, new_adv_pos)
+            eval_winner = self.evaluate_winner(my_pos, new_adv_pos, depth)
             if eval_winner is None:
                 beta = min(beta,self.maxValue(my_pos, new_adv_pos, depth - 1, alpha, beta))
             else:

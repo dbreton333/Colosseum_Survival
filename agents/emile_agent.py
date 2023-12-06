@@ -60,7 +60,7 @@ class EmileAgent(Agent):
         self.moves_checked = 0
         move = self.search(chess_board, my_pos, adv_pos, max_step)
         end_time = time.time()
-        #print("Checked " + str(self.moves_checked) + " moves in " + str(end_time-start_time) + " seconds")
+        print("Emile Turn took " + str(end_time - start_time) + " seconds")
         return move[0], self.dir_map[move[1]]
 
     def minimaxValue(self, chess_board, p1_pos, p2_pos, max_step, depth, isMax, alpha, beta):
